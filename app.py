@@ -28,7 +28,7 @@ db = SQLAlchemy(app)
 
 
 
-# DB models
+# DB models schema
 class User(db.Model):
 
     __tablename__ = 'user_table'
