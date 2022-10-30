@@ -18,8 +18,6 @@ app.config['SECRET_KEY'] = 'hardsecretkey'
 
 
 
-
-
 # SqlAlchemy Database Configuration With Mysql
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:nabeel123@localhost/notes'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -30,7 +28,7 @@ db = SQLAlchemy(app)
 
 
 
-# models
+# DB models
 class User(db.Model):
 
     __tablename__ = 'user_table'
@@ -104,7 +102,8 @@ class Register(Resource):
             return e
 
 
-# todo not completed yet
+# todo not completed yet have to change logic because of update in 
+# db schema
 class Notes(Resource):
 
     @auth.login_required
@@ -127,6 +126,8 @@ class Notes(Resource):
         return notes
 
 
+# todo not completed yet have to change logic because of update in 
+# db schema
 class SpecificNote(Resource):
 
     @auth.login_required
