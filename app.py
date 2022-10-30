@@ -96,12 +96,9 @@ class Register(Resource):
 
         try:
             user = User(username=data['username'], password_hash=generate_password_hash(data['password']))
-            print(user)
-            print('before')
+
             db.session.add(user)
-            print("here")
             db.session.commit()
-            print('ok')
             return 'SUCCESS: HERE TODO'
         except Exception as e:
             return e
