@@ -1,7 +1,7 @@
 from http.client import HTTPResponse
 from tabnanny import check
 from urllib import response
-from flask import Flask, render_template, flash, request, redirect, url_for
+from flask import Flask, render_template, flash, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api, Resource, marshal_with, fields
 from flask_httpauth import HTTPBasicAuth
@@ -52,7 +52,7 @@ class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String(200), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user_table.id'))
-    Catagory_id = db.Column(db.Integer, db.ForeignKey('catagory_table.id'))
+    catagory_id = db.Column(db.Integer, db.ForeignKey('catagory_table.id'))
     user = db.relationship('User', back_populates='notes')
     catagory = db.relationship('Catagory', back_populates='notes')
 
@@ -61,10 +61,7 @@ class Note(db.Model):
         return None
 
 
-notesField = {
-    'id': fields.Integer,
-    'content': fields.String
-}
+
 
 
 @auth.verify_password
@@ -73,16 +70,25 @@ def authentication(username, password):
     if username and password:
         
         user = User.query.filter_by(username=username).first()
+
+        if not user:
+            return False
         if check_password_hash(user.password_hash, password):
             return True
 
     return False
 
 
+notesField = {
+    'id': fields.Integer,
+    'name': fields.String,
+    'content': fields.String
+
+}
+
 # class based views
 class Register(Resource):
 
-    @marshal_with(notesField)
     def post(self):
         data = request.json
         print(data)
@@ -97,68 +103,109 @@ class Register(Resource):
 
             db.session.add(user)
             db.session.commit()
-            return 'SUCCESS: HERE TODO'
+            return 'SUCCESS', 200
         except Exception as e:
             return e
 
 
-# todo not completed yet have to change logic because of update in 
-# db schema
+
 class Notes(Resource):
+
 
     @auth.login_required
     # marshal is basically serializer
     @marshal_with(notesField)
     def get(self):
-        notes = Note.query.all()
+        user_id = User.query.filter_by(username=auth.current_user()).first().id
+        notes = db.session.query(Catagory.name, Note.id, Note.content).join(Note).filter_by(user_id=user_id).all()
         return notes
 
     @auth.login_required
-    @marshal_with(notesField)
     def post(self):
+
+        print(auth.current_user())
         # taking json data from request and add it into db
         data = request.json
-        note = Note(content=data['content'])
+        user_id = User.query.filter_by(username=auth.current_user()).first().id
+        cat = Catagory.query.filter_by(name=data['catagory']).first()
+        if cat is None:
+            cat = Catagory(name=data['catagory'])
+            db.session.add(cat)
+            db.session.commit()
+
+        note = Note(content=data['content'], user_id=user_id, catagory_id=cat.id)
         db.session.add(note)
         db.session.commit()
 
-        notes = Note.query.all()
-        return notes
+        return 'Success', 200
 
 
-# todo not completed yet have to change logic because of update in 
-# db schema
+
 class SpecificNote(Resource):
 
     @auth.login_required
     @marshal_with(notesField)
     def get(self, pk):
 
+        user_id = User.query.filter_by(username=auth.current_user()).first().id
+        
         note = Note.query.filter_by(id=pk).first()
+        if note is None:
+            return 'Not found', 400
+
+        if note.user_id != user_id:
+            return 'You are not authorized', 400
+        
+        note = db.session.query(Catagory.name, Note.id, Note.content).join(Note).filter_by(user_id=user_id).first()
+        
         return note
 
     @auth.login_required
-    @marshal_with(notesField)
     def put(self, pk):
 
+        user_id = User.query.filter_by(username=auth.current_user()).first().id
+        
+        note = Note.query.filter_by(id=pk).first()
+        if note is None:
+            return 'Not found', 400
+
+        if note.user_id != user_id:
+            return 'You are not authorized', 400
+
         data = request.json
+
+        cat = Catagory.query.filter_by(name=data['catagory']).first()
+        if cat is None:
+            cat = Catagory(name=data['catagory'])
+            db.session.add(cat)
+            db.session.commit()
+
         note = Note.query.filter_by(id=pk).first()
         note.content = data['content']
+        note.catagory_id = cat.id
         db.session.commit()
 
-        # return response only
-        notes = Note.query.all()
-        return notes
+        return 'Successfully Updated', 201
+
+
 
     @auth.login_required
-    @marshal_with(notesField)
     def delete(self, pk):
+
+        user_id = User.query.filter_by(username=auth.current_user()).first().id
+        
+        note = Note.query.filter_by(id=pk).first()
+        if note is None:
+            return 'Not found', 400
+
+        if note.user_id != user_id:
+            return 'You are not authorized', 400
+
         note = Note.query.filter_by(id=pk).first()
         db.session.delete(note)
         db.session.commit()
-
-        notes = Note.query.all()
-        return notes
+        
+        return "Successfully Deleted", 200
 
 
 
