@@ -34,8 +34,16 @@ class User(db.Model):
     __tablename__ = 'user_table'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(125), nullable=False)
-    password_hash = db.Column(db.String(125), nullable=False)
+    _password_hash = db.Column(db.String(125), nullable=False)
     notes = db.relationship('Note', back_populates='user')
+
+    @property
+    def password_hash(self):
+        return self._password_hash
+
+    @password_hash.setter
+    def password_hash(self, value):
+        self._password_hash = generate_password_hash(value)
 
 
 class Catagory(db.Model):
@@ -99,7 +107,7 @@ class Register(Resource):
         #     return 'username already Exist'
 
         try:
-            user = User(username=data['username'], password_hash=generate_password_hash(data['password']))
+            user = User(username=data['username'], password_hash=data['password'])
 
             db.session.add(user)
             db.session.commit()
