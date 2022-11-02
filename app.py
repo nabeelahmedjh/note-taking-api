@@ -46,6 +46,9 @@ class User(db.Model):
         self._password_hash = generate_password_hash(value)
 
 
+    def __repr__(self) -> str:
+        return f"User('{self.id}', '{self.username}')"
+
 class Catagory(db.Model):
 
     __tablename__ = 'catagory_table'
@@ -53,6 +56,8 @@ class Catagory(db.Model):
     name = db.Column(db.String(125), nullable=False)
     notes = db.relationship('Note', back_populates='catagory')
 
+    def __repr__(self) -> str:
+        return f"Catagory('{self.id}', '{self.name}')"
 
 class Note(db.Model):
 
@@ -65,8 +70,8 @@ class Note(db.Model):
     catagory = db.relationship('Catagory', back_populates='notes')
 
 
-    def __repr__(self):
-        return None
+    def __repr__(self) -> str:
+        return f"Note('{self.id}', '{self.content}', {self.user_id}, {self.catagory_id})"
 
 
 
@@ -85,12 +90,18 @@ def authentication(username, password):
             return True
 
     return False
-
+ 
 
 notesField = {
     'id': fields.Integer,
     'name': fields.String,
     'content': fields.String
+
+}
+
+catagoriesField = {
+    'id': fields.Integer,
+    'name': fields.String,
 
 }
 
@@ -103,8 +114,8 @@ class Register(Resource):
 
         user = User.query.filter_by(username=data['username']).first()
         
-        # if user:
-        #     return 'username already Exist'
+        if user:
+            return 'username already Exist'
 
         try:
             user = User(username=data['username'], password_hash=data['password'])
@@ -216,12 +227,27 @@ class SpecificNote(Resource):
         return "Successfully Deleted", 200
 
 
+class Catag(Resource):
+
+    @auth.login_required
+    @marshal_with(catagoriesField)
+    def get(self):
+
+        cat = Catagory.query.filter_by().all()
+        return cat
+
+
+    @auth.login_required
+    def post(self):
+        pass
+        
 
 
 # adding resoures and creating an endpoints
 api.add_resource(Register, '/v1/register')
 api.add_resource(Notes, '/v1/note')
 api.add_resource(SpecificNote, '/v1/note/<int:pk>')
+api.add_resource(Catag, '/v1/catag')
 
 
 if __name__ == '__main__':
